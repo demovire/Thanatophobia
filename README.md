@@ -8,7 +8,7 @@ Multiplayer still connects on old versions, but it's a mess, constant stuttering
 
 | Component | Supported Version |
 |---|---|
-| Phasmophobia | `0.26.8.1 |
+| Phasmophobia | `0.26.8.1` |
 | MelonLoader | `0.7.0` |
 | .NET | `6.0` |
 
