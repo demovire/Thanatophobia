@@ -28,5 +28,9 @@ If you want to compile the mod from source, install the [.NET 6 SDK](https://dot
 dotnet build -c Release -p:GameDir="path\to\Phasmophobia"
 ```
 
+## Disclaimer
+Thanatophobia is an independent, community-developed project. It is not affiliated with, endorsed by, or associated with Kinetic Games.
+Phasmophobia is the property of Kinetic Games. This repository does not distribute the game or any of its original game files. A legitimate copy of Phasmophobia is required to use this mod.
+
 ## License
-[MIT](LICENSE) -- free to use and modify. Phasmophobia itself belongs to Kinetic Games and is not included here. This mod is not affiliated with or endorsed by Kinetic Games.
+[MIT](LICENSE) -- free to use and modify.
