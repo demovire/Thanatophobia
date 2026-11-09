@@ -4,6 +4,14 @@ A mod that makes online multiplayer actually playable again on old versions of P
 
 Multiplayer still connects on old versions, but it's a mess, constant stuttering, broken voice chat, and other problems. This mod points the game at a fresh free service you set up yourself, which smooths out the connection and gets voice chat working again.
 
+## Compatibility
+
+| Component | Supported Version |
+|---|---|
+| Phasmophobia | `0.26.8.1 |
+| MelonLoader | `0.7.0` |
+| .NET | `6.0` |
+
 ## Features
 
 * Smooth online play (fixes the constant stuttering)
