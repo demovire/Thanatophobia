@@ -1,7 +1,7 @@
 using Il2CppPhoton.Pun;
 using MelonLoader;
 
-[assembly: MelonInfo(typeof(Thanatophobia.Mod), "Thanatophobia", "1.0.0", "demovire")]
+[assembly: MelonInfo(typeof(Thanatophobia.Mod), "Thanatophobia", "1.1.0", "demovire")]
 [assembly: MelonGame("Kinetic Games", "Phasmophobia")]
 
 namespace Thanatophobia;
