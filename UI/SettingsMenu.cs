@@ -12,7 +12,7 @@ namespace Thanatophobia;
 // whiteboard menu's layout or z-order. Text boxes are real InputFields you can type or paste into.
 internal static class SettingsMenu {
     private static readonly string[] Regions = {
-        "asia", "au", "cae", "eu", "hk", "in", "jp", "za", "sa", "kr", "tr", "uae", "us", "usc", "usw",
+        "asia", "au", "cae", "eu", "hk", "in", "jp", "za", "sa", "kr", "tr", "uae", "us", "ussc", "usw",
     };
 
     private static readonly Color PanelBg = new(0.07f, 0.07f, 0.085f, 0.98f);

@@ -156,12 +156,12 @@ internal static class TalkingIndicator {
     private static IEnumerable<string> AudibleTalkers() {
         var voice = PhotonVoiceNetwork.Instance;
         var listener = Object.FindObjectOfType<AudioListener>();
-        var room = PhotonNetwork.CurrentRoom;
-        if (voice == null || listener == null || room == null || voice.linkedSpeakers == null) yield break;
+        if (voice == null || listener == null || voice.linkedSpeakers == null) yield break;
 
         foreach (var speaker in voice.linkedSpeakers) {
             if (speaker == null || !speaker.IsLinked || !CanHear(speaker, listener) || !IsSpeaking(speaker)) continue;
-            var player = room.GetPlayer(speaker.remoteVoiceLink.PlayerId);
+            // The speaker sits on the talker's avatar. Voice-room player numbers don't match the game room's.
+            var player = speaker.GetComponentInParent<PhotonView>()?.Owner;
             if (player != null) yield return Clamp(player.NickName);
         }
     }

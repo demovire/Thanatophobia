@@ -11,8 +11,8 @@ public class Mod : MelonMod {
     public override void OnInitializeMelon() {
         AntiTamper.Apply(); // before the first scene can run a check
         Settings.Load();
-        PhotonNetwork.SendRate = Settings.SendRate.Value;
-        PhotonNetwork.SerializationRate = Settings.SerializationRate.Value;
+        PhotonNetwork.SendRate = System.Math.Max(1, Settings.SendRate.Value); // 0 divides by zero inside Photon
+        PhotonNetwork.SerializationRate = System.Math.Max(1, Settings.SerializationRate.Value);
         LoggerInstance.Msg("Thanatophobia active.");
         if (string.IsNullOrWhiteSpace(Settings.AppId.Value))
             LoggerInstance.Warning("No Photon App ID set. Multiplayer is disabled until you paste one via the main-menu button or UserData\\MelonPreferences.cfg.");

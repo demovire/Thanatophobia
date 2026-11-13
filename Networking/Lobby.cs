@@ -15,10 +15,8 @@ namespace Thanatophobia;
 internal static class Lobby {
     // The cap is enforced late so the game's own room setup (which sets a cap of 4) runs first.
     private const float RaiseCapDelay = 2f;
-    private const float AutoReadyDelay = 2.5f;
 
     private static float? _joinedAt;
-    private static bool _autoReadied;
     private static ServerManager _server;
 
     // Captured when the lobby loads; null outside it (e.g. during a contract), which gates the overrides.
@@ -29,14 +27,12 @@ internal static class Lobby {
 
     public static void Update() {
         if (!PhotonNetwork.InRoom) {
+            ExtraVolumeSlidersPatch.Volumes.Clear(); // keyed by actor number, which restarts in the next room
             _joinedAt = null;
             return;
         }
 
-        if (_joinedAt == null) {
-            _joinedAt = Time.time;
-            _autoReadied = false;
-        }
+        _joinedAt ??= Time.time;
 
         if (_server == null) return; // only act while the lobby exists, so missions can still lock the room
         var elapsed = Time.time - _joinedAt.Value;
@@ -47,11 +43,52 @@ internal static class Lobby {
             if (room.MaxPlayers != Settings.MaxPlayers.Value) room.MaxPlayers = Settings.MaxPlayers.Value;
             if (!room.IsOpen) room.IsOpen = true; // Photon closes a full room; reopen it once the cap is raised
         }
+    }
+}
 
-        if (!_autoReadied && elapsed >= AutoReadyDelay) {
-            _autoReadied = true;
-            _server.Ready();
+// The browser row appends a fixed "/4" to the player count. Show just the count.
+[HarmonyPatch(typeof(ServerListItem), nameof(ServerListItem.SetUI))]
+internal static class RoomCountTextPatch {
+    private static void Postfix(ServerListItem __instance, Il2CppPhoton.Realtime.RoomInfo __2) {
+        var text = __instance.field_Public_Text_1;
+        if (text != null && __2 != null) text.text = __2.PlayerCount.ToString();
+    }
+}
+
+// The server browser's own filter drops every room with more than three players, so put the bigger
+// ones back while they still have space.
+[HarmonyPatch(typeof(LobbyRoomList), nameof(LobbyRoomList.OnRoomListUpdate))]
+internal static class BigRoomListPatch {
+    private static void Postfix(LobbyRoomList __instance, Il2CppSystem.Collections.Generic.List<Il2CppPhoton.Realtime.RoomInfo> __0) {
+        var rooms = __instance.field_Public_Dictionary_2_String_RoomInfo_0;
+        if (rooms == null || __0 == null) return;
+
+        foreach (var info in __0) {
+            if (info.RemovedFromList || !info.IsOpen || !info.IsVisible || info.PlayerCount <= 3) continue;
+            if (info.MaxPlayers != 0 && info.PlayerCount >= info.MaxPlayers) continue; // full
+            rooms[info.Name] = info;
         }
+    }
+}
+
+// Clicking a listed room refuses anything with four or more players. Joining by name does the same
+// thing without that check, so send the bigger rooms that way.
+[HarmonyPatch(typeof(LobbyManager), nameof(LobbyManager.JoinServer))]
+internal static class BigRoomJoinPatch {
+    private static bool Prefix(LobbyManager __instance, Il2CppPhoton.Realtime.RoomInfo __0) {
+        if (__0 == null || !__0.IsOpen || !__0.IsVisible || __0.PlayerCount < 4) return true;
+        __instance.JoinServerByName(__0.Name);
+        return false;
+    }
+}
+
+// StartGame closes and caps the room for the mission while the lobby still exists, so stop overriding
+// or we'd reopen it and people could join mid-game.
+[HarmonyPatch(typeof(ServerManager), nameof(ServerManager.StartGame))]
+internal static class LobbyStartGamePatch {
+    private static void Postfix() {
+        var room = PhotonNetwork.CurrentRoom;
+        if (room != null && !room.IsOpen) Lobby.OnLobbyStart(null); // still open = the game refused to start
     }
 }
 
@@ -89,6 +126,10 @@ internal static class LobbyRowsPatch {
         // The lobby UI is reused between rooms, so hide the rows we added that this room doesn't need.
         var rows = __instance.field_Public_List_1_ServerItem_0;
         for (var i = NativeRows; i < rows.Count; i++) rows[i].gameObject.SetActive(i < players);
+
+        // Same for the kick buttons we added, or a kicked player's X stays behind over the buttons below.
+        var kicks = __instance.kickPlayerButtons;
+        for (var i = NativeRows; i < kicks.Length; i++) kicks[i].gameObject.SetActive(i < players && PhotonNetwork.IsMasterClient);
 
         var scale = Mathf.Min(1f, (float)NativeRows / Math.Max(players, NativeRows));
         _list.localScale = Vector3.one * scale;

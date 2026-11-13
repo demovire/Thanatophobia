@@ -30,9 +30,6 @@ internal static class VoiceEnablePatch {
 // The native connect path returns false on this build, so connect the transport directly.
 [HarmonyPatch(typeof(VoiceConnection), nameof(VoiceConnection.ConnectUsingSettings))]
 internal static class VoiceConnectPatch {
-    // Unique per process: two clients from one install would otherwise share a voice identity and Photon won't route voice between them.
-    private static readonly string VoiceUserId = Guid.NewGuid().ToString();
-
     private static bool Prefix(VoiceConnection __instance, AppSettings overwriteSettings, ref bool __result) {
         __result = false;
         __instance.Settings ??= new AppSettings();
@@ -45,10 +42,9 @@ internal static class VoiceConnectPatch {
             return false;
         }
 
-        transport.AppId = Settings.AppId.Value;
+        transport.AppId = string.IsNullOrEmpty(Settings.VoiceAppId.Value) ? Settings.AppId.Value : Settings.VoiceAppId.Value;
         transport.AppVersion = PhotonNetwork.GameVersion;
-        transport.AuthValues = null;
-        transport.UserId = VoiceUserId;
+        transport.AuthValues = null; // no user id: the server hands each connection its own
 
         try {
             transport.ConnectToNameServer();
@@ -74,26 +70,44 @@ internal static class VoiceTransportPatch {
                 MelonLogger.Warning("[Voice] Voice room name is empty, cannot join.");
                 return;
             }
-            __instance.OpJoinOrCreateRoom(new EnterRoomParams { RoomName = roomName, RoomOptions = new RoomOptions() });
+            // Hidden, or voice rooms show up in the server browser and anyone can find them.
+            __instance.OpJoinOrCreateRoom(new EnterRoomParams { RoomName = roomName, RoomOptions = new RoomOptions { IsVisible = false } });
         }
     }
 }
 
 internal static class VoiceRecorders {
-    public static Recorder Active { get; private set; }
+    private static Recorder _active;
+    private static float _nextFind;
     private static bool _inited;
 
-    // Start every recorder once we're in the voice room, reset on disconnect. Mirrors the old working mod.
+    // Our own recorder. It lives on our avatar, which is replaced on every scene load, so look it up again when it dies.
+    public static Recorder Active {
+        get {
+            if (_active == null && Time.unscaledTime >= _nextFind) {
+                _nextFind = Time.unscaledTime + 1f;
+                foreach (var rec in UnityEngine.Object.FindObjectsOfType<Recorder>())
+                    if (IsOurs(rec)) { _active = rec; break; }
+            }
+            return _active;
+        }
+    }
+
+    // Other players' avatars carry a Recorder too; starting those opens our mic once per avatar.
+    private static bool IsOurs(Recorder rec) {
+        var view = rec.GetComponentInParent<PhotonView>();
+        return view == null || view.IsMine;
+    }
+
+    // Start our recorders once we're in the voice room, reset on disconnect. Mirrors the old working mod.
     public static void OnVoiceState(PhotonVoiceNetwork pvn, ClientState toState) {
         if (toState == ClientState.Joined && !_inited) {
             foreach (var rec in UnityEngine.Object.FindObjectsOfType<Recorder>()) {
-                // Other players' avatars carry a Recorder too; starting those opens our mic once per avatar.
-                var view = rec.GetComponentInParent<PhotonView>();
-                if (view != null && !view.IsMine) continue;
+                if (!IsOurs(rec)) continue;
                 rec.AutoStart = false;
                 rec.Init(pvn);
                 rec.StartRecording(); // capture runs; the game's push-to-talk gates transmission
-                Active = rec;
+                _active = rec;
             }
             _inited = true;
             MelonLogger.Msg("[Voice] recorders started");

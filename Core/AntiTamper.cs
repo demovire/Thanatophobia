@@ -14,12 +14,21 @@ internal static class AntiTamper {
         0x123DB10, 0x123DFB0, 0x123E160, 0x123E6C0, 0x123ED30,  // cluster B
     };
 
+    private const long ExpectedSize = 46089216; // GameAssembly.dll of the build the RVAs were taken from
+
     private static readonly byte[] RetZero = { 0x31, 0xC0, 0xC3 }; // xor eax,eax ; ret
 
     public static void Apply() {
         var module = GetModuleHandle("GameAssembly.dll");
         if (module == IntPtr.Zero) {
             MelonLogger.Error("[AntiTamper] GameAssembly.dll not found; anti-tamper NOT disabled.");
+            return;
+        }
+
+        // The RVAs only fit this exact build; on any other one they'd land in unrelated code and corrupt it.
+        var size = new System.IO.FileInfo(System.IO.Path.Combine(MelonLoader.Utils.MelonEnvironment.GameRootDirectory, "GameAssembly.dll")).Length;
+        if (size != ExpectedSize) {
+            MelonLogger.Error($"[AntiTamper] unsupported game build (GameAssembly.dll is {size} bytes, expected {ExpectedSize}); anti-tamper NOT disabled.");
             return;
         }
 

@@ -10,19 +10,26 @@ namespace Thanatophobia;
 // Tracks when each remote Speaker last received a voice frame. Drives the HUD's "actively speaking" test and
 // lets VoiceAudio spot a stalled stream that keeps replaying buffered audio (the voice loop-back bug).
 internal static class VoiceActivity {
-    private static readonly Dictionary<IntPtr, float> _lastFrame = new();
+    // Frames arrive on Photon's decode thread, so lock the map and use a clock that is safe off the main thread.
+    private static readonly Dictionary<IntPtr, long> _lastFrame = new();
 
-    public static void Mark(Speaker sp) => _lastFrame[sp.Pointer] = Time.unscaledTime;
+    public static void Mark(Speaker sp) {
+        lock (_lastFrame) _lastFrame[sp.Pointer] = Environment.TickCount64;
+    }
 
-    public static float FrameAge(Speaker sp) =>
-        _lastFrame.TryGetValue(sp.Pointer, out var t) ? Time.unscaledTime - t : float.MaxValue;
+    public static float FrameAge(Speaker sp) {
+        lock (_lastFrame)
+            return _lastFrame.TryGetValue(sp.Pointer, out var t) ? (Environment.TickCount64 - t) / 1000f : float.MaxValue;
+    }
 
     public static string FrameAgeText(Speaker sp) {
         var age = FrameAge(sp);
         return age > 1e6f ? "never" : $"{age:0.00}s";
     }
 
-    public static void Forget(Speaker sp) => _lastFrame.Remove(sp.Pointer);
+    public static void Forget(Speaker sp) {
+        lock (_lastFrame) _lastFrame.Remove(sp.Pointer);
+    }
 
     public static string Name(Speaker sp) {
         var nick = sp.Actor?.NickName;
