@@ -87,6 +87,9 @@ internal static class VoiceRecorders {
     public static void OnVoiceState(PhotonVoiceNetwork pvn, ClientState toState) {
         if (toState == ClientState.Joined && !_inited) {
             foreach (var rec in UnityEngine.Object.FindObjectsOfType<Recorder>()) {
+                // Other players' avatars carry a Recorder too; starting those opens our mic once per avatar.
+                var view = rec.GetComponentInParent<PhotonView>();
+                if (view != null && !view.IsMine) continue;
                 rec.AutoStart = false;
                 rec.Init(pvn);
                 rec.StartRecording(); // capture runs; the game's push-to-talk gates transmission
@@ -112,8 +115,12 @@ internal static class VoiceAudio {
         var diag = Settings.VoiceDiagnostics.Value && Time.unscaledTime >= _nextDiag;
         if (diag) {
             _nextDiag = Time.unscaledTime + 2f;
-            var rec = VoiceRecorders.Active;
-            MelonLogger.Msg($"[VoiceDiag] mic transmit={(rec != null && rec.IsCurrentlyTransmitting)} speakers={speakers.Count}");
+            var pvn = PhotonVoiceNetwork.Instance;
+            var rec = VoiceRecorders.Active ?? pvn.PrimaryRecorder;
+            // Full mic state: which of these is wrong for a silent host tells us where the chain breaks.
+            MelonLogger.Msg(rec == null
+                ? $"[VoiceDiag] voice={pvn.ClientState} mic=none speakers={speakers.Count}"
+                : $"[VoiceDiag] voice={pvn.ClientState} mic init={rec.IsInitialized} recording={rec.IsRecording} enabled={rec.isActiveAndEnabled} txEnabled={rec.TransmitEnabled} transmit={rec.IsCurrentlyTransmitting} restart={rec.RequiresRestart} viewId={rec.UserData?.ToString() ?? "null"} speakers={speakers.Count}");
         }
 
         foreach (var sp in speakers) {
@@ -123,7 +130,7 @@ internal static class VoiceAudio {
             if (src != null && src.outputAudioMixerGroup != null) src.outputAudioMixerGroup = null;
 
             if (diag)
-                MelonLogger.Msg($"[VoiceDiag] {VoiceActivity.Name(sp)} playing={sp.IsPlaying} lag={sp.Lag}ms delay={sp.PlayDelayMs}ms idle={VoiceActivity.FrameAgeText(sp)}");
+                MelonLogger.Msg($"[VoiceDiag] {VoiceActivity.Name(sp)} playing={sp.IsPlaying} vol={(src != null ? src.volume : -1f):0.00} mute={(src != null && src.mute)} lag={sp.Lag}ms delay={sp.PlayDelayMs}ms idle={VoiceActivity.FrameAgeText(sp)}");
         }
     }
 }
@@ -138,16 +145,4 @@ internal static class VoiceStatePatch {
 [HarmonyPatch(typeof(Recorder), "OnEnable")]
 internal static class RecorderEnablePatch {
     private static bool Prefix() => false;
-}
-
-// Some builds ship no SpeakerPrefab, so remote voice has nothing to play through. Create one on demand.
-[HarmonyPatch(typeof(VoiceConnection), "SimpleSpeakerFactory")]
-internal static class SpeakerFactoryPatch {
-    private static void Prefix(VoiceConnection __instance, int __0) {
-        if (__instance.SpeakerPrefab == null) {
-            var go = new GameObject("VoiceSpeaker_" + __0);
-            go.AddComponent<Speaker>();
-            __instance.SpeakerPrefab = go;
-        }
-    }
 }
