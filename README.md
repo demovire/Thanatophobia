@@ -15,10 +15,11 @@ Multiplayer still connects on old versions, but it's a mess, constant stuttering
 ## Features
 
 * Smooth online play (fixes the constant stuttering)
-* Working voice chat (proximity and radio)
+* Working voice chat (proximity and radio), push-to-talk or open mic
 * More than 4 players in a lobby
 * A speaking indicator and a list of who's talking nearby
 * A custom nickname
+* Keys 1, 2 and 3 switch straight to an inventory slot
 
 ## Setup
 

@@ -25,6 +25,7 @@ internal static class SettingsMenu {
     private static CanvasGroup _group;
     private static bool _open;
     private static Text _regionLabel;
+    private static Text _voiceLabel;
     private static Font _font;
     private static string _appIdAtOpen;
     private static string _regionAtOpen;
@@ -88,11 +89,19 @@ internal static class SettingsMenu {
         AddLabel(panel, "NICKNAME", new Vector2(0, 30));
         AddInput(panel, new Vector2(0, -10), Settings.Nickname.Value, "Blank = your Steam name", v => Settings.Nickname.Value = v.Trim());
 
-        AddLabel(panel, "REGION", new Vector2(0, -90));
-        _regionLabel = AddButton(panel, new Vector2(0, -130), new Vector2(300, 56), RegionLabel(), NextRegion);
+        AddLabel(panel, "REGION / VOICE", new Vector2(0, -90));
+        _regionLabel = AddButton(panel, new Vector2(-170, -130), new Vector2(320, 56), RegionLabel(), NextRegion);
+        _voiceLabel = AddButton(panel, new Vector2(170, -130), new Vector2(320, 56), VoiceLabel(), ToggleOpenMic);
 
         AddButton(panel, new Vector2(0, -210), new Vector2(280, 60), "SAVE & CLOSE", Toggle);
         AddText(Centered("Note", panel, new Vector2(700, 24), new Vector2(0, -256)), "Changes apply on close (App ID / region reconnect briefly).", 15, TextAnchor.MiddleCenter, Dim);
+    }
+
+    private static string VoiceLabel() => Settings.OpenMic.Value ? "VOICE: OPEN MIC" : "VOICE: PUSH TO TALK";
+
+    private static void ToggleOpenMic() {
+        Settings.OpenMic.Value = !Settings.OpenMic.Value;
+        _voiceLabel.text = VoiceLabel();
     }
 
     private static string RegionLabel() => $"REGION: {Settings.Region.Value.ToUpperInvariant()}";

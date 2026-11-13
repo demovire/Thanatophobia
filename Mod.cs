@@ -29,7 +29,9 @@ public class Mod : MelonMod {
             PhotonNetwork.NickName = nickname;
 
         TalkingIndicator.Update();
+        InventoryHotkeys.Update();
         Lobby.Update();
+        VoiceRecorders.Update();
         VoiceAudio.Update();
         SettingsMenu.Update();
         PhotonReconnect.Update();

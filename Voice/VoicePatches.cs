@@ -99,6 +99,19 @@ internal static class VoiceRecorders {
         return view == null || view.IsMine;
     }
 
+    private static bool _wasOpen;
+
+    // Open mic: the game's push-to-talk switches transmission off on key release, so hold it on and let
+    // Photon's voice detection keep silence off the wire.
+    public static void Update() {
+        var rec = Active;
+        if (rec == null) return;
+        var open = Settings.OpenMic.Value;
+        if (rec.VoiceDetection != open) rec.VoiceDetection = open;
+        if (open != rec.TransmitEnabled && (open || _wasOpen)) rec.TransmitEnabled = open;
+        _wasOpen = open;
+    }
+
     // Start our recorders once we're in the voice room, reset on disconnect. Mirrors the old working mod.
     public static void OnVoiceState(PhotonVoiceNetwork pvn, ClientState toState) {
         if (toState == ClientState.Joined && !_inited) {

@@ -13,6 +13,7 @@ internal static class Settings {
     public static MelonPreferences_Entry<float> MicGain { get; private set; }
     public static MelonPreferences_Entry<string> Nickname { get; private set; }
     public static MelonPreferences_Entry<bool> VoiceDiagnostics { get; private set; }
+    public static MelonPreferences_Entry<bool> OpenMic { get; private set; }
 
     public static void Load() {
         var category = MelonPreferences.CreateCategory("Thanatophobia");
@@ -25,6 +26,7 @@ internal static class Settings {
         TalkingListRange = category.CreateEntry("TalkingListRange", 10f, "Metres within which a talking player is listed on screen (radio users always are)");
         MicGain = category.CreateEntry("HudMicGain", 6f, "Voice HUD bar sensitivity (higher = bars swing more for the same mic volume)");
         Nickname = category.CreateEntry("Nickname", "", "Your in-game name (blank = use your Steam name)");
+        OpenMic = category.CreateEntry("OpenMic", false, "Transmit whenever you speak instead of holding push-to-talk");
         VoiceDiagnostics = category.CreateEntry("VoiceDiagnostics", true, "Log voice stream diagnostics to the console (set false once voice is stable)");
     }
 }
